@@ -5,14 +5,15 @@ date: "07-05-2020"
 output: pdf_document
 ---
 
+\pagebreak 
+
 # Mapas para uso comun DER
 
-La idea de este documento es mostrar algunas formas simples de plotear datos georeferenciados y alguna variable de interés, que generalmente en nuestro departamento, es la captura, esfuerzo, CPUE, long medias, etc. Por otro lado, aquí también podemos evaluar la distribución de nuestras variables en una escala temporal, ya sea en días, meses y/o años.
+La motivación de este documento es mostrar algunas formas simples de visualizar datos georeferenciados y alguna variable de interés en el espacio, lo que generalmente en nuestro departamento es común, ploteando datos como captura, esfuerzo, CPUE, long medias, etc. Por otro lado, aquí también podremos evaluar la distribución de nuestras variables en una escala temporal, ya sea en días, meses y/o años.
 
+En terminos de estética de mapas, esta es tan diversa como personas en el mundo, por lo que es muy probable, esta guía no cumpla a cabalidad el gusto, pero cada uno puede luego customizar a su gusto el code. El objetivo es poder visualizar de forma rapida y simple datos en el espacio, ya que eso nos puede dar algunas señales de como es la dínamica de poblaciones del recurso que estamos analizando (bueno, no soy quien para enseñar esas cosas). 
 
-En terminos de estética de mapas, es tan diversa como érsonas en el mundo, por lo que es muy probable, esta guia no cumpla a cabalidad el gusto, pero que cada uno puede luego customizar a su gusto, sin embargo, la idea es poder representar en el espacio los datos comumente usados en nuestros informes, los cuales me he dado cuenta, que muchas veces mostramos mapas que vienen de un arrastre de un pasado oscuro e indeterminado.
-
-La idea es aprovechar R y todas sus propiedades gráficas, que gracias a las nuevas librerias, ha competido de buena forma con el reinado de otras plataformas GIS (como ArcMap, Surfer, Matlab,etc), con prestaciones cartográficas múltiples y suficiente resolución.
+La idea es aprovechar R y todas sus propiedades gráficas, que gracias a las nuevas librerias, ha competido de buena forma con el reinado (hasta ahora) de otras plataformas GIS; como ArcMap, Surfer, Matlab,etc., R ahora (por lo poco que conozco) cuenta con prestaciones cartográficas múltiples y suficiente (útil) resolución. 
 
 En este caso, mostraremos 3 maneras de hacer mapas en R de forma muy sencilla.
 
@@ -21,7 +22,7 @@ En este caso, mostraremos 3 maneras de hacer mapas en R de forma muy sencilla.
 3. Generando un raster.
 
 
-Este documento es solo un conjuto de formas de visualizar los datos que se encuentran en libros e internet. 
+
 
 
 \pagebreak 
@@ -388,13 +389,13 @@ ggplot() +
 
 #  Consideraciones
 
-1. Este es solo un rejunte de muchos libros, manuales y rincones en la web por ende el mérito es de los creadores que lo hacen simple
+1. Este documento es solo un conjuto de formas de visualizar los datos que se encuentran en libros e internet. Por ende un collage de muchos libros, manuales y rincones en la web, por ende el mérito es de los creadores que hacen simple lo complejo.
 
 2. Si lo consideran útil, pueden compartirlo.
 
-3. Agradecería el feedback, detección de errores o sugerencias para mejorar el documento o los mismos mapas. Por ejemplo, me quedó pendiente el hacer un *inside map* o mapa de referencia que haré pronto y también plotear 2 shapes en el mismo mapa. Cosas sencillas pero que ameritan tiempo.
+3. Agradecería el feedback, detección de errores o sugerencias para mejorar el documento o los mismos mapas. Por ejemplo, me quedó pendiente el hacer un *inside map* o mapa de referencia que haré pronto y también plotear 2 shapes en el mismo mapa. Cosas sencillas pero que ameritan tiempo y retroalimentación (estoy dispuesto).
 
-4. El code estará en github para tratar de forzarnos aprender a hacer modificaciones en grupo (pull, merge, commit, push, pong, bang y todo eso!)
+4. El code estará en GitHub para tratar de forzarnos a aprender a hacer modificaciones en grupo (pull, merge, commit, push, pong, bang y todo eso!)
 
 https://github.com/MauroMardones/Maps
 
@@ -409,7 +410,7 @@ https://www.earthdatascience.org/
 
 https://www.r-graph-gallery.com/index.html
 
-Todos los archivos y datos estan en un repositorio de GitHub;
+
 
 
 
