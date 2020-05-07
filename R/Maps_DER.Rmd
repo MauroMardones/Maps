@@ -1,0 +1,421 @@
+---
+title: "Mapas de uso común DER"
+author: "Mauricio_Mardones_I"
+date: "07-05-2020"
+output: pdf_document
+---
+
+# Mapas para uso comun DER
+
+La idea de este documento es mostrar algunas formas simples de plotear datos georeferenciados y alguna variable de interés, que generalmente en nuestro departamento, es la captura, esfuerzo, CPUE, long medias, etc. Por otro lado, aquí también podemos evaluar la distribución de nuestras variables en una escala temporal, ya sea en días, meses y/o años.
+
+
+En terminos de estética de mapas, es tan diversa como érsonas en el mundo, por lo que es muy probable, esta guia no cumpla a cabalidad el gusto, pero que cada uno puede luego customizar a su gusto, sin embargo, la idea es poder representar en el espacio los datos comumente usados en nuestros informes, los cuales me he dado cuenta, que muchas veces mostramos mapas que vienen de un arrastre de un pasado oscuro e indeterminado.
+
+La idea es aprovechar R y todas sus propiedades gráficas, que gracias a las nuevas librerias, ha competido de buena forma con el reinado de otras plataformas GIS (como ArcMap, Surfer, Matlab,etc), con prestaciones cartográficas múltiples y suficiente resolución.
+
+En este caso, mostraremos 3 maneras de hacer mapas en R de forma muy sencilla.
+
+1. Leyendo shapes files.
+2. Usando marmpap library.
+3. Generando un raster.
+
+
+Este documento es solo un conjuto de formas de visualizar los datos que se encuentran en libros e internet. 
+
+
+\pagebreak 
+
+# Librerías y datos
+
+Lo primero es cargar todas las librerias necesarias para hacer mapas
+```{r echo=T, eval=T, warning=FALSE, message=FALSE}
+library(RColorBrewer) #para hacer paletas de colores
+library(viridis) # Mas colres
+library(rgdal) #para leer shapes
+library(ggplot2) #para todo
+library(maptools) 
+library(sf) # parte de transformaciones  de coordenadas
+library(tidyverse) # Todo, incluso mas que Rstudio mismo!
+library(patchwork) # para juntar ggplot
+library(marmap) # para sacar batimetrias
+library(mapproj) #no recuerdo
+library(maps) # para obtener limites
+library(ggspatial) #para figuritas
+library(raster) #para extraer bordes
+#library(ggmap) # estos son mapas mas estilo pagina web. Hay que tener un key. No lo usaré.
+```
+
+Ahora leo el directorio y los archivos necesarios. Aqui he alojado una base de datos que es la que generalmente tenemos. En este caso datos georeferenciados de capturas de erizo del sur.
+
+```{r}
+rm(list=ls())
+setwd("C:/Users/mauricio.mardones/Documents/IFOP/Maps_R/Maps_2")
+point <- read.csv2("geo_erizo_1996_2019.csv", sep=",", stringsAsFactors=FALSE, na.strings = T)
+
+```
+
+Es importante sealar que todos los ejercicios entan hechos en sistema de coordenadas 
+geograficos (Lat, Long). Para tener una idea de como vienen los datos de este ejemplo.
+
+```{r eval=T, echo=T}
+# leo los 10 primeros datos y algunas variables de interés
+head(point [c(3, 4, 8, 15 )], 10)
+```
+
+Luego una transfomación de la estructura de ciertos datos para no tener problemas en la manipulación respecto al formato de cada uno.
+
+```{r eval=F, echo=T}
+#estrucutura de los datos
+glimpse(point)
+```
+
+
+```{r eval=T, echo=F}
+#cambio algunos formatos
+point$LONGITUD = as.numeric(as.character(point$LONGITUD))
+point$ANO_REG = as.numeric(point$ANO_REG)
+point$MES_REG = as.numeric(point$MES_REG)
+point$LATITUD = as.numeric(as.character(point$LATITUD))
+point$CAPTURA_2 = as.numeric(as.character(point$CAPTURA_2))
+```
+
+Saco los datos cero en coordenadas y en mi caso cambió de kilos a toneladas para no tener numeros tan grandes, en este caso, capturas.
+```{r}
+point <- filter(point, LONGITUD < 0) %>% 
+  mutate(CAPT = CAPTURA_2/1000) 
+```
+
+A su vez, pueden probar con algunos datos que tengan ests estructura 
+
+```{r echo=T, eval=FALSE}
+point <- data.frame(long=c(-172,-173,-170,-170.5,-170.52), 
+                lat=c(62.1,62.2,62.3,63,65), 
+                capt=c(150, 100, 40, 590, 320))
+```
+
+Una vez teniendo nuestra data ordenada y en formato de lectura, haremos los mapas.
+
+\pagebreak 
+
+# 1. Leyendo shapes files.
+
+La priimera forma será  generare mapas a traves del uso de shapes. Existen muchas fuentes para bajar este tipo de archivos las cuales encontraran en las referencias.
+
+En este caso, yo bajé la de las regiones X y XI del sur de Chile, en donde se desarrolla la pesquería de erizo.
+
+```{r echo=T, eval=T}
+mapzona<-readOGR(dsn="C:/Users/mauricio.mardones/Documents/IFOP/Maps_R/Maps_2",layer="10y11")
+# tambien podemos llamar el archivo con otra función
+#mapzona2 <- readShapePoly("10y11.shp")
+```
+
+Lo siguiente es convertir el arcghivo a formato para uso de ggplot.
+```{r}
+mapzona_df <- fortify(mapzona)
+```
+
+El mapa se lee con geom_polygon y los datos se leen en la función geom_point
+
+
+```{r}
+# Breaks para Legenda
+mybreaks <- c(1, 15, 50)
+```
+
+```{r echo=T, eval=T, fig.height=10,fig.width=6,fig.align="center"}
+# Magnitud de capturas
+# aqui filtro un año por que mi base es muy pesada y se demora en plotear. 
+#Dejo solo el 2019
+ggplot() +
+  geom_polygon(data = mapzona_df, aes(x=long, y = lat, group = group), 
+               fill="grey", alpha=0.8) +
+  geom_point(data=point %>% 
+               filter(ANO_REG == 2019), aes(x=LONGITUD, y=LATITUD, 
+                                            size=CAPT, color=CAPT, alpha=CAPT),
+             shape=20) +
+  scale_size_continuous(name="Capt (t.)",  range=c(1,12), breaks=mybreaks) +
+  scale_alpha_continuous(name="Capt (t.)",  range=c(1, 12), breaks=mybreaks) +
+  scale_color_viridis(option="inferno", trans="log", breaks=mybreaks, name="Capt (t.)" ) +
+  annotation_north_arrow(location="tr",
+                         height = unit(1.5, "cm"),
+                         width = unit(1.5, "cm"))+
+  theme_bw(base_size=15) +  coord_map() + 
+  xlab(expression(paste(Longitude^o,~'O'))) +
+  ylab(expression(paste(Latitude^o,~'S')))+
+  guides( colour = guide_legend()) +
+  #ggtitle("Capturas Erizo (t) 2019") +
+  theme(
+    legend.position="right"
+    #text = element_text(color = "#22211d"),
+    #plot.background = element_rect(fill = "#f5f5f2", color = NA), 
+    #panel.background = element_rect(fill = "#f5f5f2", color = NA), 
+    #legend.background = element_rect(fill = "#f5f5f2", color = NA)
+    #plot.title = element_text(size= 16, hjust=0.1, color = "#4e4d47", 
+    #                         margin = margin(b = -0.1, t = 0.4, l = 2, unit = "cm")),
+  )
+```
+
+Otra forma es sacando el fondo, solo por estetica
+
+```{r echo=T, eval=T, fig.height=8,fig.width=5,fig.align="center"}
+#Aqui sin fondo con theme_void
+ggplot() +
+  geom_polygon(data = mapzona_df, aes(x=long, y = lat, group = group), 
+               fill="grey", alpha=0.8) +
+  geom_point(data=point %>% 
+               filter(ANO_REG == 2019), aes(x=LONGITUD, y=LATITUD, 
+                                            size=CAPT, color=CAPT, alpha=CAPT),
+             shape=20) +
+  scale_size_continuous(name="Capt (t.)",  range=c(1,12), breaks=mybreaks) +
+  scale_alpha_continuous(name="Capt (t.)",  range=c(1, 12), breaks=mybreaks) +
+  scale_color_viridis(option="plasma", trans="log", breaks=mybreaks, name="Capt (t.)" ) +
+  annotation_north_arrow(location="tr",
+                         height = unit(1.5, "cm"),
+                         width = unit(1.5, "cm"))+
+  theme_void(base_size=15) +  coord_map() + 
+  xlab(expression(paste(Longitude^o,~'O'))) +
+  ylab(expression(paste(Latitude^o,~'S')))+
+  guides( colour = guide_legend()) +
+  #ggtitle("Capturas Erizo (t) 2019") +
+  theme(
+    legend.position="right"
+    #text = element_text(color = "#22211d"),
+    #plot.background = element_rect(fill = "#f5f5f2", color = NA), 
+    #panel.background = element_rect(fill = "#f5f5f2", color = NA), 
+    #legend.background = element_rect(fill = "#f5f5f2", color = NA)
+    #plot.title = element_text(size= 16, hjust=0.1, color = "#4e4d47", 
+    #                         margin = margin(b = -0.1, t = 0.4, l = 2, unit = "cm")),
+  )
+```
+
+\pagebreak 
+
+Ahora podemos ver como se distribuyen los datos en el tiempo. En este caso, mi variable temporal será "MES_REG" y usaré un facet_wrap
+
+```{r echo=T, eval=T, fig.height=10,fig.width=8,fig.align="center"}
+#aqui se muestra la distribucion y magnituid a traves del tiempo, 
+#en este caso, los meses que dura la temporada 
+
+ggplot() +
+  geom_polygon(data = mapzona_df, aes(x=long, y = lat, group = group), 
+               fill="grey", alpha=0.8) +
+  geom_point(data=point %>% 
+               filter(ANO_REG == 2019), aes(x=LONGITUD, y=LATITUD, 
+                                            size=CAPT, color=CAPT, alpha=CAPT),
+             shape=20) +
+  scale_size_continuous(name="Capt (t.)",  range=c(1,12), breaks=mybreaks) +
+  scale_alpha_continuous(name="Capt (t.)",  range=c(1, 12), breaks=mybreaks) +
+  scale_color_viridis(option="cividis", trans="log", breaks=mybreaks, name="Capt (t.)" ) +
+  annotation_north_arrow(location='tr',
+                         height = unit(1.5, "cm"),
+                         width = unit(1.5, "cm"))+
+  theme_void(base_size=15) +  coord_map() + 
+  xlab(expression(paste(Longitude^o,~'O'))) +
+  ylab(expression(paste(Latitude^o,~'S')))+
+  guides( colour = guide_legend()) +
+  facet_wrap(~MES_ARR, ncol = 5)+
+  #ggtitle("Capturas Erizo (t) 2019") +
+  theme(
+    legend.position="right"
+    #text = element_text(color = "#22211d"),
+    #plot.background = element_rect(fill = "#f5f5f2", color = NA), 
+    #panel.background = element_rect(fill = "#f5f5f2", color = NA), 
+    #legend.background = element_rect(fill = "#f5f5f2", color = NA)
+    #plot.title = element_text(size= 16, hjust=0.1, color = "#4e4d47", 
+    #                         margin = margin(b = -0.1, t = 0.4, l = 2, unit = "cm")),
+  )
+```
+\pagebreak 
+
+# 2. Usando marmpap library.
+
+Esta libreria permite extraer lineas de costa y batimetrias con sus funciones. Cada cual define sus limites expresados en coordenadas.
+
+Esta librería es útil si uno no tiene shapes de su área da estudio, sin embargo, no tienen muy buena resolución
+
+
+```{r echo=T, eval=T}
+#obtenemos los limites de la zona de estudio. En este caso las regiones X y XI
+bathy <- getNOAA.bathy(-75,-72,-46,-41, resolution=1, keep=TRUE)
+```
+
+
+```{r echo=T, eval=T}
+#creo paleta de colores por que tiene por default unas muy basicas
+blues <- c("lightsteelblue4", "lightsteelblue3",
+           "lightsteelblue2", "lightsteelblue1")
+greys <- c(grey(0.6), grey(0.93), grey(0.99))
+```
+
+
+Ahora ploteo los datos de capturas de erizo del año 2019
+
+```{r echo=T, eval=T, fig.height=10,fig.width=8,fig.align="center"}
+autoplot(bathy, geom=c("r", "b"), coast=TRUE,  show.legend=FALSE) + 
+  scale_fill_gradient2(low = blues,   high = greys)+
+  #scale_fill_gradient2(low="aliceblue", mid="white", high="white")+
+  #scale_fill_etopo() + labs(x = "Longitude", y = "Latitude")+ 
+  geom_point(data=point %>% 
+               filter(ANO_REG == 2019), aes(x=LONGITUD, y=LATITUD,
+                      size=CAPT, colour=CAPT, alpha=CAPT), shape=20)+
+  scale_size_continuous(name="Capt (t.)",  range=c(1,12), breaks=mybreaks) +
+  #scale_alpha_continuous(name="Capt (t.)",  range=c(1, 12), breaks=mybreaks) +
+  scale_color_viridis(option="inferno", trans="log", 
+                      breaks=mybreaks, name="Capt (t.)" ) +
+  annotation_north_arrow(location='tr',
+                         height = unit(1.5, "cm"),
+                         width = unit(1.5, "cm"))+
+  guides( colour = guide_legend()) +
+  scale_alpha(guide = 'none')+
+  #facet_wrap(~MES_REG ,ncol = 5)+
+  #annotate("text", x = -74, y = -41.5, label = "PMZC")+
+  xlab(expression(paste(Longitude^o,~'O'))) +
+  ylab(expression(paste(Latitude^o,~'S')))+
+  theme(legend.position = "right")
+```
+
+
+\pagebreak 
+
+Ahora ploteo los datos de capturas de erizo del año 2019 a traves de los meses 
+
+```{r echo=T, eval=T, fig.height=10,fig.width=8,fig.align="center"}
+autoplot(bathy, geom=c("r", "b"), coast=TRUE,  show.legend=FALSE) + 
+  scale_fill_gradient2(low = blues,   high = greys)+
+  #scale_fill_gradient2(low="aliceblue", mid="white", high="white")+
+  #scale_fill_etopo() + labs(x = "Longitude", y = "Latitude")+ 
+  geom_point(data=point %>% 
+               filter(ANO_REG == 2019), aes(x=LONGITUD, y=LATITUD,
+                      size=CAPT, colour=CAPT, alpha=CAPT), shape=20)+
+  scale_size_continuous(name="Capt (t.)",  range=c(1,12), breaks=mybreaks) +
+  #scale_alpha_continuous(name="Capt (t.)",  range=c(1, 12), breaks=mybreaks) +
+  scale_color_viridis(option="inferno", trans="log", 
+                      breaks=mybreaks, name="Capt (t.)" ) +
+  annotation_north_arrow(location='tr',
+                         height = unit(1.5, "cm"),
+                         width = unit(1.5, "cm"))+
+  guides( colour = guide_legend()) +
+  scale_alpha(guide = 'none')+
+  facet_wrap(~MES_REG ,ncol = 5)+
+  #annotate("text", x = -74, y = -41.5, label = "PMZC")+
+  xlab(expression(paste(Longitude^o,~'O'))) +
+  ylab(expression(paste(Latitude^o,~'S')))+
+  theme(legend.position = "right")
+```
+
+\pagebreak 
+
+# 3. Generando mapas con un raster.
+
+
+En este ultimo ejemplo, gerearemos los mapas disponibles en bases globales.
+
+#Saco datos de un raster
+```{r}
+chile<-getData('GADM',country='CHL',level=1)
+#para conocer los npomres y codes de cada region
+chile@data$NAME_1
+# ahora saco dos regiones, en este caso X y XI
+pm <- subset(chile [c(1,9),])
+```
+
+
+```{r echo=T, eval=T, fig.height=6,fig.width=4,fig.align="center"}
+#ploteo para chequear
+plot(pm)
+```
+
+\pagebreak
+Ahora paso el raster a un formato para ser usado por ggplot usando la función fortify
+
+```{r}
+pm <- fortify(pm)
+```
+
+```{r  echo=T, eval=T, fig.height=10,fig.width=8,fig.align="center"}
+ggplot() +
+  geom_polygon(data=pm,aes( x= long, y=lat, group= group),
+               fill="gray", alpha=0.99)+
+  geom_point(data=point %>% 
+               filter(ANO_REG == 2019), aes(x=LONGITUD, y=LATITUD,
+                        colour=CAPT, size=CAPT, alpha=1/10))+
+  annotation_north_arrow(location='tr')+
+  scale_size_continuous(name="Capt (t.)",  range=c(1,12), breaks=mybreaks) +
+  #scale_alpha_continuous(name="Capt (t.)",  range=c(1, 12), breaks=mybreaks) +
+  scale_color_viridis_c(option="magma",trans="log", breaks=mybreaks, name="Capt (t.)")+
+  theme_bw() +  coord_map() +
+  scale_alpha(guide="none")+
+  xlab(expression(paste(Longitude^o,~'O'))) +
+  ylab(expression(paste(Latitude^o,~'S')))+
+  guides( colour = guide_legend()) +
+  theme(panel.background = element_rect(fill = 'aliceblue'))+
+        #panel.grid.major = element_blank(), 
+        #panel.grid.minor = element_blank())+
+  theme(legend.position = "right")
+
+```
+
+\pagebreak
+
+Ahora un mapa de las capturas a través de los meses.
+
+```{r echo=T, eval=T, fig.height=10,fig.width=8,fig.align="center"}
+ggplot() +
+  geom_polygon(data=pm,aes( x= long, y=lat, group= group),
+               fill="gray", alpha=0.99)+
+  geom_point(data=point %>% 
+               filter(ANO_REG == 2019), aes(x=LONGITUD, y=LATITUD,
+                        colour=CAPT, size=CAPT, alpha=1/10))+
+  facet_wrap(~MES_REG, ncol = 5)+
+  annotation_north_arrow(location='tr')+
+  scale_size_continuous(name="Capt (t.)",  range=c(1,12), breaks=mybreaks) +
+  #scale_alpha_continuous(name="Capt (t.)",  range=c(1, 12), breaks=mybreaks) +
+  scale_color_viridis_c(option="magma",trans="log", breaks=mybreaks, name="Capt (t.)")+
+  theme_bw() +  coord_map() +
+  scale_alpha(guide="none")+
+  xlab(expression(paste(Longitude^o,~'O'))) +
+  ylab(expression(paste(Latitude^o,~'S')))+
+  guides( colour = guide_legend()) +
+  theme(panel.background = element_rect(fill = 'aliceblue'))+
+        #panel.grid.major = element_blank(), 
+        #panel.grid.minor = element_blank())+
+  theme(legend.position = "right")
+
+```
+
+\pagebreak 
+
+#  Consideraciones
+
+1. Este es solo un rejunte de muchos libros, manuales y rincones en la web por ende el mérito es de los creadores que lo hacen simple
+
+2. Si lo consideran útil, pueden compartirlo.
+
+3. Agradecería el feedback, detección de errores o sugerencias para mejorar el documento o los mismos mapas. Por ejemplo, me quedó pendiente el hacer un *inside map* o mapa de referencia que haré pronto y también plotear 2 shapes en el mismo mapa. Cosas sencillas pero que ameritan tiempo.
+
+4. El code estará en github para tratar de forzarnos aprender a hacer modificaciones en grupo (pull, merge, commit, push, pong, bang y todo eso!)
+
+https://github.com/MauroMardones/Maps
+
+
+5. Link útiles;
+
+https://stackoverflow.com/ Siempre!
+
+https://cougrstats.wordpress.com/tag/tidyverse/
+
+https://www.earthdatascience.org/
+
+https://www.r-graph-gallery.com/index.html
+
+Todos los archivos y datos estan en un repositorio de GitHub;
+
+
+
+
+
+
+
+
+
