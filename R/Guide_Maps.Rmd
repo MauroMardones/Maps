@@ -19,7 +19,7 @@ En este caso, mostraremos 3 maneras de hacer mapas en R de forma muy sencilla.
 1. Leyendo shapes files.
 2. Usando marmpap library.
 3. Generando un raster.
-
+4. Prueba
 
 
 \pagebreak 
